@@ -1,6 +1,6 @@
 import pandas as pd
 from inspect2 import getfullargspec
-from numpy.core import int64, float64, array
+from numpy.core import int64, float64, array, isnan
 
 
 class Clean(object):
@@ -121,7 +121,7 @@ def clean(filepath):
 
 
 @overload
-def clean(filepath, replace_dict):
+def clean(dataframe, replace_dict):
     """
     function for reading .csv into pandas dataframe and also
     replacing values. Values in replace_dict can also be functions
@@ -136,7 +136,7 @@ def clean(filepath, replace_dict):
                         keys-> old value, vals-> new value
     :return:
     """
-    dataframe = pd.read_csv(filepath)
+    #dataframe = pd.read_csv(filepath)
     for column_name in dataframe[replace_dict.keys()]:
 
         sub_replace_dict = replace_dict[column_name]
@@ -151,18 +151,9 @@ def clean(filepath, replace_dict):
                     dataframe[column_name] = column.replace(to_replace=old_val, value=new_val)
                 else:
                     raise Exception("cannot apply function to ", column.dtype)
-            elif isinstance(replace_val, str) or isinstance(replace_val, int):
+            elif isinstance(replace_val, str) or isinstance(replace_val, int) or isnan(replace_val):
                 dataframe[column_name] = column.replace(to_replace=old_val, value=replace_val)
             else:
                 raise Exception(replace_val, " is not a supported value in replace_dict")
 
     return dataframe
-
-@overload
-def drop(dataframe, values):
-    """
-    This function removes all rows containing values found in values for any column
-    :param value:
-    :return:
-    """
-
