@@ -1,59 +1,80 @@
-from numpy import median, mean, NaN
+from nb_platforms import LabelEncoderPlatform, OneHotPlatform, clean_data, split_data, MixedPlatform
+from numpy import NaN
+import pandas as pd
 import os
-from nb_label_encoder import nb_label_encoder
-from nb_one_hot import nb_one_hot
+import seaborn as sns
+import matplotlib.pyplot as plt
+from DistPlot import distplot
 
 """
 The goal of this project is to predict if a person makes over 50k per year
 """
+
 # import the data into dataframe
 filename = "adult.csv"
 filepath = os.path.join(os.getcwd(), "data", filename)
 explanatory_variable = "income"
-data_cleaning_dict = {'income':
-                        {'<=50K': False,
-                        '>50K': True},
-                     'workclass':
-                         {'?': NaN},
-                     'fnlwgt':
-                         {'?': NaN},
-                     'education':
-                         {'?': NaN},
-                     'education.num':
-                         {'?': NaN},
-                     'marital.status':
-                         {'?': NaN},
-                     'occupation':
-                         {'?': NaN},
-                     'relationship':
-                         {'?': NaN},
-                     'race':
-                         {'?': NaN},
-                     'sex':
-                         {'?': NaN},
-                     'capital.gain':
-                         {'?': NaN},
-                     'hours.per.week':
-                         {'?': NaN},
-                     'native.country':
-                         {'?': NaN}}
+data_cleaning_dict = {'income': {'<=50K': False,
+                                 '>50K': True},
+                      'workclass':
+                          {'?': NaN},
+                      'fnlwgt':
+                          {'?': NaN},
+                      'education':
+                          {'?': NaN},
+                      'education.num':
+                          {'?': NaN},
+                      'marital.status':
+                          {'?': NaN},
+                      'occupation':
+                          {'?': NaN},
+                      'relationship':
+                          {'?': NaN},
+                      'race':
+                          {'?': NaN},
+                      'sex':
+                          {'?': NaN},
+                      'capital.gain':
+                          {'?': NaN},
+                      'hours.per.week':
+                          {'?': NaN},
+                      'native.country':
+                          {'?': NaN}}
 
+model_platforms = [LabelEncoderPlatform, OneHotPlatform, MixedPlatform]
+accuracy_dict = dict(zip([platform.__name__ for platform in model_platforms], [[] for i in range(len(model_platforms))]))
+raw_df = pd.read_csv(filepath)
 
-models_to_test = [nb_one_hot, nb_label_encoder]
-model_dict = dict(zip([model.__name__ for model in models_to_test], [[] for i in range(len(models_to_test))]))
+for platform in model_platforms:
+    df = clean_data(raw_df.copy(), data_cleaning_dict)
 
-for model in models_to_test:
-    model_instance = model(filepath)
+    model = platform()
 
-    df = model_instance.clean_data(data_cleaning_dict)
-
-    df1 = model_instance.format_attr(df)
+    df1 = model.format_attr(df)
     for it in xrange(0, 100):
-        X_train, X_test, y_train, y_test = model_instance.split_data(df1, explanatory_variable)
+        X_train, X_test, y_train, y_test = split_data(df1, explanatory_variable)
 
-        trained_model = model_instance.create_model(X_train, y_train)
+        trained_model = model.create_model(X_train, y_train)
 
-        model_dict[model.__name__].append(model_instance.get_results(trained_model, X_test, y_test)['Accuracy'])
+        accuracy_dict[platform.__name__].append(model.get_results(X_test, y_test)['Accuracy'])
 
-for k, v in model_dict.iteritems():
-    print k, " : ", mean(v), ", ", median(v)
+accuracy_df = pd.DataFrame.from_dict(accuracy_dict)
+distplot(accuracy_df)
+#print accuracy_df
+'''
+for column in accuracy_df.columns:
+    print column
+    col_data = accuracy_df[column]
+    sns.distplot(col_data, kde=False, label=column + " performance")#, bins=8)
+
+#print accuracy_df.describe()
+
+
+# Plot formatting
+plt.legend(prop={'size': 12})
+plt.title('Naive Bayes Platform Performance')
+plt.xlabel('Accuracy (%)')
+plt.ylabel('Density')
+plt.grid(True)
+plt.show()
+'''
