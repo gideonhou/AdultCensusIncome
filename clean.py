@@ -1,6 +1,8 @@
 import pandas as pd
 from inspect2 import getfullargspec
-from numpy.core import int64, float64, array, isnan
+from numpy.core import int64, float64, isnan
+from sklearn import preprocessing
+from sklearn.model_selection import train_test_split
 
 
 class Clean(object):
@@ -136,15 +138,13 @@ def clean(dataframe, replace_dict):
                         keys-> old value, vals-> new value
     :return:
     """
-    #dataframe = pd.read_csv(filepath)
     for column_name in dataframe[replace_dict.keys()]:
 
         sub_replace_dict = replace_dict[column_name]
 
-        for (old_val, replace_val) in sub_replace_dict.iteritems():
+        for (old_val, replace_val) in sub_replace_dict.items():
             column = dataframe[column_name]
             if callable(replace_val):
-                print column.dtype
 
                 if column.dtype == int64 or column.dtype == float64:
                     new_val = replace_val(column)
@@ -157,3 +157,72 @@ def clean(dataframe, replace_dict):
                 raise Exception(replace_val, " is not a supported value in replace_dict")
 
     return dataframe
+
+
+def clean_data(df, replace_dict):
+    return clean(df, replace_dict).dropna()
+
+
+def split_data(df, response_variable, test_ratio=0.05):
+    explanatory = [col for col in df.columns if col != response_variable]
+    response = df[response_variable]
+    X_train, X_test, y_train, y_test = train_test_split(df[explanatory],
+                                                        response,
+                                                        test_size=test_ratio,
+                                                        stratify=response)
+    return X_train, X_test, y_train, y_test
+
+
+def cont2cat(df, bin_map):
+    """
+    This method transforms numerical attributes to categorical
+    :param df:
+    :return:
+    """
+    # create a copy of original dataframe for conversion to all continuous attributes
+    df_clean = df.copy()
+
+    # create copy of all obj (categorical) type attributes into its own dataframe
+    df_num = df_clean.select_dtypes(include=['int64', 'float64']).copy()
+
+    # convert each column in obj dataframe to a continuous value
+    new_cat_attr = list(bin_map.keys())
+    for df_num_col_name in bin_map.keys():
+        cat = pd.cut(df_num[df_num_col_name], bin_map[df_num_col_name]).to_frame()
+        cat.columns = [df_num_col_name]
+        df_num[df_num_col_name] = cat
+
+    # reassign all num attributes in copied original dataframe to continuous attributes
+    df_clean[new_cat_attr] = df_num[new_cat_attr]
+
+    return df_clean
+
+
+def cat2cont(df):
+    """
+    This method transforms non numerical attributes to numerical
+    :return:
+    """
+
+    # create a copy of original dataframe for conversion to all continuous attributes
+    df_clean = df.copy()
+
+    # create copy of all obj (categorical) type attributes into its own dataframe
+    df_obj = df_clean.select_dtypes(include=['object']).copy()
+
+    # get column names of obj dataframe
+    obj_col_names = [col for col in df_obj.columns]
+
+    # create label encoder to be used for encoding string values to numerical
+    label_encoder = preprocessing.LabelEncoder()
+
+    # convert each column in obj dataframe to a continuous value
+    for df_obj_col_name in obj_col_names:
+        df_obj[df_obj_col_name] = label_encoder.fit_transform(df_obj[df_obj_col_name])
+
+    # reassign all obj attributes in copied original dataframe to continuous attributes
+    df_clean[obj_col_names] = df_obj[obj_col_names]
+
+    return df_clean
+
+

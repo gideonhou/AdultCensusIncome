@@ -1,35 +1,10 @@
 from sklearn import preprocessing
-from sklearn.naive_bayes import BaseNB
+from sklearn.naive_bayes import BaseNB, CategoricalNB
 from sklearn.naive_bayes import GaussianNB, MultinomialNB
 import numpy as np
 
-
-def cat2cont(df):
-    """
-    This method transforms non numerical attributes to numerical
-    :return:
-    """
-
-    # create a copy of original dataframe for conversion to all continuous attributes
-    df_clean = df.copy()
-
-    # create copy of all obj (categorical) type attributes into its own dataframe
-    df_obj = df_clean.select_dtypes(include=['object']).copy()
-
-    # get column names of obj dataframe
-    obj_col_names = [col for col in df_obj.columns]
-
-    # create label encoder to be used for encoding string values to numerical
-    label_encoder = preprocessing.LabelEncoder()
-
-    # convert each column in obj dataframe to a continuous value
-    for df_obj_col_name in obj_col_names:
-        df_obj[df_obj_col_name] = label_encoder.fit_transform(df_obj[df_obj_col_name])
-
-    # reassign all obj attributes in copied original dataframe to continuous attributes
-    df_clean[obj_col_names] = df_obj[obj_col_names]
-
-    return df_clean
+#from nb_platforms import cat2cont
+from clean import cat2cont
 
 
 class MixedNB(BaseNB):
@@ -43,7 +18,7 @@ class MixedNB(BaseNB):
     """
 
     def __init__(self):
-        self.mNB = MultinomialNB()
+        self.mNB = CategoricalNB()#MultinomialNB()
         self.gNB = GaussianNB()
 
     def _joint_log_likelihood(self, X):
